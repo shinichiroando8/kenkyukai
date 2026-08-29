@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お知らせ・お支払い — 内分泌糖尿病心理行動研究会 会員向けアプリ</title>
+<style>
+  :root {
+    --bg: #EEEAE2;
+    --surface: #FFFFFF;
+    --surface-2: #E2DACB;
+    --ink: #24201B;
+    --ink-soft: #62594C;
+    --ink-faint: #8B8172;
+    --accent: #2F5B6B;
+    --accent-strong: #234450;
+    --accent-ink: #F0F6F8;
+    --gold: #A2732A;
+    --line: rgba(36, 32, 27, 0.16);
+    --line-strong: rgba(36, 32, 27, 0.3);
+    --shadow: 0 18px 40px -22px rgba(30, 25, 18, 0.35);
+    --font-display: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", "Segoe UI", sans-serif;
+    --font-body: "Hiragino Sans", "Yu Gothic", Meiryo, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #1A1712;
+    --surface: #24211A;
+    --surface-2: #2E2A20;
+    --ink: #F1ECE2;
+    --ink-soft: #C2B8A4;
+    --ink-faint: #8B8172;
+    --accent: #6FB5CC;
+    --accent-strong: #93CBDD;
+    --accent-ink: #0E1B1F;
+    --gold: #E0AE5C;
+    --line: rgba(241, 236, 226, 0.16);
+    --line-strong: rgba(241, 236, 226, 0.32);
+    --shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1A1712;
+      --surface: #24211A;
+      --surface-2: #2E2A20;
+      --ink: #F1ECE2;
+      --ink-soft: #C2B8A4;
+      --ink-faint: #8B8172;
+      --accent: #6FB5CC;
+      --accent-strong: #93CBDD;
+      --accent-ink: #0E1B1F;
+      --gold: #E0AE5C;
+      --line: rgba(241, 236, 226, 0.16);
+      --line-strong: rgba(241, 236, 226, 0.32);
+      --shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.75;
+    overflow-x: hidden;
+  }
+
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 5vw, 48px);
+  }
+
+  /* ---------- header ---------- */
+  header.site { padding: 22px 0 6px; }
+  .site-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 0.02em;
+  }
+  .brand .mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    transform: rotate(-6deg);
+  }
+  .brand .sub {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+  nav.site-nav {
+    display: flex;
+    gap: clamp(14px, 3vw, 26px);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  nav.site-nav a { text-decoration: none; border-bottom: 1px solid transparent; }
+  nav.site-nav a:hover { border-color: var(--line-strong); color: var(--ink); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: clamp(36px, 7vw, 72px) 0 clamp(28px, 5vw, 56px); }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: clamp(28px, 5vw, 56px);
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    margin: 0 0 18px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 16px;
+    height: 1px;
+    background: var(--accent-strong);
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(28px, 4.2vw, 44px);
+    line-height: 1.32;
+    letter-spacing: -0.01em;
+    margin: 0 0 20px;
+    text-wrap: balance;
+  }
+  h1 em { font-style: normal; color: var(--accent-strong); }
+  .hero p.lead {
+    font-size: clamp(15px, 1.5vw, 17px);
+    color: var(--ink-soft);
+    max-width: 48ch;
+    margin: 0 0 30px;
+  }
+  .hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 26px; }
+  .btn {
+    font-family: var(--font-body);
+    font-size: 14.5px;
+    font-weight: 700;
+    padding: 13px 24px;
+    border-radius: 5px;
+    text-decoration: none;
+    display: inline-block;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+  .hero-note {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ---------- notice card ---------- */
+  .notice {
+    position: relative;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: 1fr 108px;
+    overflow: visible;
+    isolation: isolate;
+  }
+  .notice-main { padding: 26px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .notice-row { display: flex; justify-content: space-between; gap: 14px; }
+  .notice-field .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .notice-field .value { font-family: var(--font-mono); font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .notice-field .value.big { font-size: clamp(19px, 2.6vw, 24px); font-weight: 700; font-family: var(--font-display); }
+  .notice-divider { position: relative; border-left: 2px dashed var(--line-strong); }
+  .notice-divider::before, .notice-divider::after {
+    content: "";
+    position: absolute;
+    left: -14px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg);
+  }
+  .notice-divider::before { top: -14px; }
+  .notice-divider::after { bottom: -14px; }
+  .notice-stub {
+    padding: 26px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    text-align: center;
+  }
+  .stamp {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-10deg);
+  }
+  .notice-stub .no {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    writing-mode: vertical-rl;
+    letter-spacing: 0.15em;
+  }
+
+  /* ---------- section shell ---------- */
+  section { padding: clamp(40px, 7vw, 76px) 0; }
+  .section-head { max-width: 60ch; margin-bottom: clamp(28px, 4vw, 40px); }
+  .section-head .eyebrow { margin-bottom: 14px; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(23px, 3vw, 30px);
+    line-height: 1.4;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .section-head p { color: var(--ink-soft); font-size: 15px; margin: 0; }
+
+  /* ---------- audience chips ---------- */
+  .audience { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: clamp(24px, 4vw, 34px) 0; }
+  .audience-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .audience-label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-faint); white-space: nowrap; }
+  .chip-list { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    font-size: 13px;
+    padding: 7px 14px 7px 12px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    position: relative;
+  }
+  .chip::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 7px;
+    vertical-align: middle;
+  }
+
+  /* ---------- problem section ---------- */
+  .problem-list { display: grid; gap: 14px; }
+  .problem-item {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .problem-item .glyph {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .problem-item .glyph::after, .problem-item .glyph::before {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 1.6px;
+    background: var(--ink-faint);
+  }
+  .problem-item .glyph::before { transform: rotate(45deg); }
+  .problem-item .glyph::after { transform: rotate(-45deg); }
+  .problem-item h3 { margin: 0 0 4px; font-size: 15.5px; font-weight: 700; }
+  .problem-item p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+
+  /* ---------- solution steps ---------- */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .step { padding: 26px 22px; position: relative; }
+  .step + .step { border-left: 1px dashed var(--line-strong); }
+  .step .step-no {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .step h3 { margin: 0 0 8px; font-size: 16.5px; font-weight: 700; }
+  .step p { margin: 0; color: var(--ink-soft); font-size: 13.8px; }
+
+  /* ---------- features receipt ---------- */
+  .receipt {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: clamp(20px, 3vw, 30px) clamp(20px, 4vw, 34px);
+  }
+  .receipt-title {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px dashed var(--line-strong);
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+  }
+  .feature-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 20px;
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--line);
+    align-items: baseline;
+  }
+  .feature-row:last-child { border-bottom: none; }
+  .feature-row h3 { margin: 0; font-size: 15px; font-weight: 700; }
+  .feature-row .tag { font-family: var(--font-mono); font-size: 11px; color: var(--gold); align-self: start; padding-top: 3px; white-space: nowrap; }
+  .feature-row p { grid-column: 1 / -1; margin: 4px 0 0; color: var(--ink-soft); font-size: 13.8px; max-width: 62ch; }
+
+  /* ---------- piatix note ---------- */
+  .platform-note {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface-2);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-top: clamp(20px, 3vw, 28px);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  .platform-note .badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--accent-strong);
+    border: 1px solid var(--line-strong);
+    border-radius: 5px;
+    padding: 5px 10px;
+    white-space: nowrap;
+    background: var(--surface);
+  }
+
+  /* ---------- cta footer ---------- */
+  .cta-block {
+    background: var(--surface-2);
+    border-radius: 14px;
+    padding: clamp(32px, 6vw, 54px) clamp(24px, 6vw, 54px);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cta-block h2 { margin-bottom: 8px; }
+  .cta-block p { margin: 0; color: var(--ink-soft); font-size: 14.5px; max-width: 46ch; }
+  .cta-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  footer.site {
+    padding: 34px 0 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+  footer.site .brand { font-size: 13px; }
+  footer.site .brand .mark { width: 20px; height: 20px; font-size: 10px; }
+
+  @media (max-width: 760px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .notice { grid-template-columns: 1fr; }
+    .notice-divider { border-left: none; border-top: 1px dashed var(--line-strong); }
+    .notice-divider::before, .notice-divider::after { top: -14px; left: auto; }
+    .notice-divider::before { left: -14px; }
+    .notice-divider::after { left: auto; right: -14px; top: -14px; bottom: auto; }
+    .notice-stub { flex-direction: row; justify-content: space-between; }
+    .notice-stub .no { writing-mode: horizontal-tb; }
+    .steps { grid-template-columns: 1fr; }
+    .step + .step { border-left: none; border-top: 1px dashed var(--line-strong); }
+    nav.site-nav { display: none; }
+    .platform-note { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap site-head">
+    <div class="brand">
+      <span class="mark">研</span>
+      お知らせ・お支払い
+      <span class="sub">内分泌糖尿病心理行動研究会 会員向けアプリ</span>
+    </div>
+    <nav class="site-nav">
+      <a href="#problem">課題</a>
+      <a href="#solution">解決方法</a>
+      <a href="#features">できること</a>
+      <a href="#contact">問い合わせ</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">会員・参加者の方へ</p>
+        <h1>研究会からのお知らせも、<br>参加費のお支払いも、<em>ひとつの画面</em>で。</h1>
+        <p class="lead">内分泌糖尿病心理行動研究会の会員・参加者向けの、お知らせ配信と支払いのアプリです。2027年3月14日(日)13時開催のオンライン研修会の案内をまとめて届け、参加費(2,000円)のお支払いは piatix によるオンライン決済でその場に完了します。糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)の単位証明書発行と各認定組織への単位申請、日本心身医学会専門医の資格更新単位にも対応し、振込確認の手間はいりません。</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="kenkyukai-app-demo.html">参加者用アプリを見る</a>
+          <a class="btn btn-ghost" href="kenkyukai-app-demo.html#admin">事務局用アプリを見る</a>
+        </div>
+        <p class="hero-note">お知らせ配信・参加費支払い・資格更新単位の認定を、ひとつの画面で。</p>
+      </div>
+
+      <div class="notice" aria-label="お知らせ・お支払いのイメージ">
+        <div class="notice-main">
+          <div class="notice-row">
+            <div class="notice-field">
+              <span class="label">Notice</span>
+              <span class="value big">オンライン研修会 参加登録</span>
+            </div>
+          </div>
+          <div class="notice-row">
+            <div class="notice-field">
+              <span class="label">開催日時</span>
+              <span class="value">2027-03-14 13:00〜</span>
+            </div>
+            <div class="notice-field">
+              <span class="label">支払期限</span>
+              <span class="value">2027-02-26</span>
+            </div>
+          </div>
+          <div class="notice-row">
+            <div class="notice-field">
+              <span class="label">参加費</span>
+              <span class="value">¥2,000</span>
+            </div>
+            <div class="notice-field">
+              <span class="label">支払方法</span>
+              <span class="value">piatix オンライン決済</span>
+            </div>
+          </div>
+        </div>
+        <div class="notice-divider"></div>
+        <div class="notice-stub">
+          <div class="stamp">受付中</div>
+          <span class="no">No. 00032</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="audience">
+    <div class="wrap audience-row">
+      <span class="audience-label">こんな案内・支払いに</span>
+      <div class="chip-list">
+        <span class="chip">オンライン研修会 参加登録</span>
+        <span class="chip">糖尿病療養指導士 単位証明・申請</span>
+        <span class="chip">都道府県糖尿病療養指導士 単位証明・申請</span>
+        <span class="chip">日本心身医学会専門医 更新単位</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="problem">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">課題</p>
+        <h2>お知らせの配信も、参加費の管理も、事務局の手作業に頼っている。</h2>
+        <p>会員数が増えるほど、案内の送付から入金確認までの事務負担が積み重なっていきます。</p>
+      </div>
+      <div class="problem-list">
+        <div class="problem-item">
+          <span class="glyph" aria-hidden="true"></span>
+          <div>
+            <h3>お知らせがメーリングリストやFAXに分散する</h3>
+            <p>開催案内や締切のリマインドが複数の手段に分かれ、会員に届いているか把握しづらい。</p>
+          </div>
+        </div>
+        <div class="problem-item">
+          <span class="glyph" aria-hidden="true"></span>
+          <div>
+            <h3>参加費の入金確認が手作業になる</h3>
+            <p>銀行振込の明細と申込者を一件ずつ突き合わせる作業が、開催のたびに事務局の負担になる。</p>
+          </div>
+        </div>
+        <div class="problem-item">
+          <span class="glyph" aria-hidden="true"></span>
+          <div>
+            <h3>単位証明書の発行や認定組織への申請に手間がかかる</h3>
+            <p>糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)の単位証明書発行や、認定組織ごとの単位申請の手続きを、事務局が参加者ごとに手作業で行っている。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="solution">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">解決方法</p>
+        <h2>お知らせの配信から piatix 決済まで、ひとつの流れで完了。</h2>
+        <p>会員・参加者は届いた案内から、そのままオンラインで参加登録と支払いを済ませられます。</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="step-no">STEP 1 — お知らせ</span>
+          <h3>会員全体・対象者にまとめて配信</h3>
+          <p>オンライン研修会の案内、締切のリマインドをメールでまとめて届けます。既読・未読の把握もできます。</p>
+        </div>
+        <div class="step">
+          <span class="step-no">STEP 2 — 参加登録</span>
+          <h3>案内から登録フォームへ</h3>
+          <p>お知らせに記載のリンクから、参加登録フォームに直接アクセス。氏名・所属を入力するだけで申込が完了します。</p>
+        </div>
+        <div class="step">
+          <span class="step-no">STEP 3 — お支払い</span>
+          <h3>piatix でオンライン決済</h3>
+          <p>参加費(2,000円)は piatix の決済ページでその場にお支払い完了。受講後は事務局が単位証明書を発行し、各認定組織への単位申請まで行います。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">できること</p>
+        <h2>研究会の事務局業務に必要な機能を、ひとつに。</h2>
+      </div>
+      <div class="receipt">
+        <div class="receipt-title">主な機能</div>
+        <div class="feature-row">
+          <h3>会員・参加者へのお知らせ配信</h3>
+          <span class="tag">NOTICE</span>
+          <p>オンライン研修会の案内や締切リマインドを、対象者を絞ってメールで一斉配信します。</p>
+        </div>
+        <div class="feature-row">
+          <h3>オンライン参加登録フォーム</h3>
+          <span class="tag">ENTRY</span>
+          <p>お知らせから直接申込につながるフォームを用意し、参加者情報を自動で集約します。</p>
+        </div>
+        <div class="feature-row">
+          <h3>piatix 決済連携</h3>
+          <span class="tag">PAYMENT</span>
+          <p>参加費の支払いを piatix のオンライン決済ページに接続。振込・現金対応が不要になります。</p>
+        </div>
+        <div class="feature-row">
+          <h3>糖尿病療養指導士・都道府県糖尿病療養指導士の単位証明書発行・申請代行</h3>
+          <span class="tag">CREDIT APPLY</span>
+          <p>受講後、事務局側で単位証明書を発行。糖尿病療養指導士、および岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都の糖尿病療養指導士それぞれの認定組織へ、単位として認められるよう申請まで代行します。</p>
+        </div>
+        <div class="feature-row">
+          <h3>資格更新単位の受講証明書発行</h3>
+          <span class="tag">CREDIT</span>
+          <p>日本心身医学会専門医をはじめ、資格更新に受講証明書が必要な参加者へ、受講後に自動で発行します。</p>
+        </div>
+        <div class="feature-row">
+          <h3>入金状況の一覧管理</h3>
+          <span class="tag">TRACKING</span>
+          <p>誰が支払い済みで誰が未払いかを、事務局側で一覧から確認できます。突き合わせ作業が不要です。</p>
+        </div>
+        <div class="feature-row">
+          <h3>自動リマインド通知</h3>
+          <span class="tag">REMINDER</span>
+          <p>支払期限や開催日が近づくと、未対応の会員にのみ自動でリマインドを届けます。</p>
+        </div>
+        <div class="feature-row">
+          <h3>領収書の自動発行</h3>
+          <span class="tag">RECEIPT</span>
+          <p>支払い完了後、領収書が自動で発行され、会員がそのまま保存・提出できます。</p>
+        </div>
+      </div>
+      <div class="platform-note">
+        <span class="badge">piatix 連携</span>
+        <span>決済基盤には、イベント・学会向けの実績があるチケット・決済サービス「piatix」の利用を想定しています。新しい決済システムをゼロから構築せず、参加登録から入金確認までを短期間で立ち上げられます。</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap">
+      <div class="cta-block">
+        <div>
+          <h2>お知らせ・お支払いアプリを、実際に動かして確認できます。</h2>
+          <p>参加者としての申込み・お支払いの流れと、事務局としての参加者・入金管理の画面を、それぞれお試しいただけます。</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn btn-primary" href="kenkyukai-app-demo.html">参加者用アプリを見る</a>
+          <a class="btn btn-ghost" href="kenkyukai-app-demo.html#admin">事務局用アプリを見る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; width:100%;">
+    <div class="brand"><span class="mark">研</span>お知らせ・お支払い</div>
+    <span>内分泌糖尿病心理行動研究会 会員向けアプリ — 企画コンセプト</span>
+  </div>
+</footer>
+
+</body>
+</html>

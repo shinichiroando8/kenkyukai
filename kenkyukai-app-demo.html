@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>お知らせ・お支払い アプリ(動作デモ) — 内分泌糖尿病心理行動研究会</title>
+<style>
+  :root {
+    --bg: #EEEAE2;
+    --surface: #FFFFFF;
+    --surface-2: #E2DACB;
+    --ink: #24201B;
+    --ink-soft: #62594C;
+    --ink-faint: #8B8172;
+    --accent: #2F5B6B;
+    --accent-strong: #234450;
+    --accent-ink: #F0F6F8;
+    --gold: #A2732A;
+    --good: #2F6B4F;
+    --good-ink: #F3F7EF;
+    --warn: #A2432A;
+    --warn-ink: #FBF1EC;
+    --line: rgba(36, 32, 27, 0.16);
+    --line-strong: rgba(36, 32, 27, 0.3);
+    --shadow: 0 18px 40px -22px rgba(30, 25, 18, 0.35);
+    --font-display: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", "Segoe UI", sans-serif;
+    --font-body: "Hiragino Sans", "Yu Gothic", Meiryo, "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    line-height: 1.7;
+  }
+  a { color: inherit; }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 32px); }
+
+  /* ---------- demo banner ---------- */
+  .demo-banner {
+    background: var(--accent-strong);
+    color: var(--accent-ink);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 8px 12px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- header ---------- */
+  header.site { padding: 18px 0; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .site-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-display); font-weight: 800; font-size: 17px; }
+  .brand .mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 7px;
+    background: var(--accent); color: var(--accent-ink);
+    font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+    transform: rotate(-6deg);
+  }
+  .brand .sub { font-weight: 500; font-size: 11.5px; color: var(--ink-faint); }
+
+  .role-switch { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 8px; }
+  .role-switch button {
+    border: none; background: transparent; padding: 7px 14px; font-size: 13px; font-weight: 700;
+    color: var(--ink-soft); border-radius: 6px; cursor: pointer;
+  }
+  .role-switch button.active { background: var(--accent); color: var(--accent-ink); }
+
+  nav.tabs { display: flex; gap: 6px; padding: 12px 0 0; }
+  nav.tabs button {
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-soft);
+    padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  nav.tabs button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  main { padding: clamp(24px, 5vw, 44px) 0 60px; }
+
+  h1 { font-family: var(--font-display); font-size: clamp(20px, 3vw, 26px); font-weight: 800; margin: 0 0 6px; }
+  h2 { font-family: var(--font-display); font-size: 18px; font-weight: 800; margin: 0 0 4px; }
+  .page-lead { color: var(--ink-soft); font-size: 14px; margin: 0 0 24px; }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 14px;
+  }
+  .notice-card { display: flex; justify-content: space-between; gap: 16px; align-items: center; cursor: pointer; transition: box-shadow .15s ease, transform .15s ease; }
+  .notice-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+  .notice-card .meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); margin-bottom: 6px; }
+  .notice-card h3 { margin: 0 0 6px; font-size: 16px; }
+  .notice-card p { margin: 0; color: var(--ink-soft); font-size: 13px; }
+  .notice-card .chevron { font-family: var(--font-mono); color: var(--ink-faint); font-size: 18px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px; font-family: var(--font-mono);
+  }
+  .badge.open { background: var(--good-ink); color: var(--good); }
+  .badge.closed { background: var(--surface-2); color: var(--ink-faint); }
+  .badge.paid { background: var(--good-ink); color: var(--good); }
+  .badge.unpaid { background: var(--warn-ink); color: var(--warn); }
+  .badge.pending { background: #FDF3E3; color: var(--gold); }
+
+  /* ---------- form ---------- */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: 7px;
+    font-size: 14px; font-family: inherit; background: var(--surface); color: var(--ink);
+  }
+  .field .hint { font-size: 11.5px; color: var(--ink-faint); margin-top: 5px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+  .btn {
+    font-size: 14px; font-weight: 700; padding: 12px 22px; border-radius: 7px; border: 1px solid transparent;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: transform .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+  .btn-block { width: 100%; justify-content: center; }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
+
+  .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); text-decoration: none; margin-bottom: 18px; cursor: pointer; border: none; background: none; padding: 0; }
+  .back-link:hover { color: var(--ink); }
+
+  /* ---------- summary / receipt ---------- */
+  .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row .k { color: var(--ink-soft); }
+  .summary-row .v { font-weight: 700; font-family: var(--font-mono); }
+  .summary-row.total .v { font-size: 18px; color: var(--accent-strong); }
+
+  .piatix-panel { background: var(--surface-2); border-radius: 10px; padding: 18px 20px; margin: 18px 0; }
+  .piatix-panel .plabel { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; color: var(--ink-faint); margin-bottom: 10px; }
+
+  .receipt {
+    border: 1px dashed var(--line-strong); border-radius: 10px; padding: 22px; background: var(--surface);
+    text-align: center;
+  }
+  .receipt .stamp {
+    display: inline-flex; align-items: center; justify-content: center; width: 68px; height: 68px;
+    border-radius: 50%; border: 2px solid var(--good); color: var(--good); font-weight: 700; font-size: 12px;
+    transform: rotate(-8deg); margin-bottom: 14px;
+  }
+  .receipt .no { font-family: var(--font-mono); color: var(--ink-faint); font-size: 12.5px; }
+
+  .note-box { background: #FDF3E3; border-radius: 10px; padding: 16px 18px; font-size: 13px; color: #6B4A16; margin-top: 16px; }
+
+  /* ---------- table (admin) ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .stat .num { font-family: var(--font-mono); font-size: 22px; font-weight: 700; }
+  .stat .label { font-size: 12px; color: var(--ink-faint); }
+
+  table.reg-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 13px; }
+  table.reg-table th, table.reg-table td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  table.reg-table th { background: var(--surface-2); font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
+  table.reg-table tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; }
+  .row-btn { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; }
+  .row-btn:hover { background: var(--surface-2); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--ink-faint); font-size: 13.5px; }
+
+  footer.site { text-align: center; padding: 24px 0 40px; font-size: 12px; color: var(--ink-faint); }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">これは動作イメージのデモです。実際の決済・メール送信・piatix連携は行われません(データは端末のブラウザ内にのみ保存されます)。</div>
+
+<header class="site">
+  <div class="wrap">
+    <div class="site-head">
+      <div class="brand">
+        <span class="mark">研</span>
+        お知らせ・お支払い
+        <span class="sub">内分泌糖尿病心理行動研究会</span>
+      </div>
+      <div class="role-switch">
+        <button id="role-member" class="active">会員・参加者</button>
+        <button id="role-admin">事務局</button>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs-member">
+      <button data-view="notices" class="active">お知らせ一覧</button>
+      <button data-view="mypage">マイページ</button>
+    </nav>
+    <nav class="tabs" id="tabs-admin" style="display:none;">
+      <button data-view="admin-list" class="active">参加者・入金管理</button>
+      <button data-view="admin-new">お知らせ作成</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="view-root"></main>
+
+<footer class="site">内分泌糖尿病心理行動研究会 お知らせ・お支払いアプリ — 企画デモ</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "kenkyukai_app_demo_v1";
+
+  var PREFECTURES = ["岡山県", "大阪府", "京都府", "北九州", "兵庫県", "神奈川県", "東京都"];
+  var PREFECTURE_QUALIFICATIONS = PREFECTURES.map(function (p) { return p + "糖尿病療養指導士"; });
+  var QUALIFICATIONS = ["なし", "糖尿病療養指導士"].concat(PREFECTURE_QUALIFICATIONS).concat(["日本心身医学会専門医"]);
+
+  function defaultState() {
+    return {
+      notices: [
+        {
+          id: "n1",
+          title: "オンライン研修会 参加登録",
+          subtitle: "内分泌糖尿病心理行動研究会 オンライン研修会",
+          date: "2027-03-14",
+          time: "13:00〜",
+          deadline: "2027-02-26",
+          fee: 2000,
+          body: "内分泌糖尿病心理行動研究会が開催するオンライン研修会のご案内です。参加費のお支払いは piatix によるオンライン決済でその場に完了します。糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)については、受講後に事務局が単位証明書を発行し、各認定組織へ単位として認められるよう申請まで行います。日本心身医学会専門医については受講証明書を発行します。",
+          status: "open"
+        }
+      ],
+      registrations: []
+    };
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if (!parsed || !parsed.notices || !parsed.registrations) return defaultState();
+      return parsed;
+    } catch (e) {
+      return defaultState();
+    }
+  }
+
+  var state = loadState();
+
+  function saveState() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function uid(prefix) {
+    return prefix + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function yen(n) { return "¥" + Number(n).toLocaleString("ja-JP"); }
+
+  function findNotice(id) {
+    for (var i = 0; i < state.notices.length; i++) if (state.notices[i].id === id) return state.notices[i];
+    return null;
+  }
+  function findRegistration(id) {
+    for (var i = 0; i < state.registrations.length; i++) if (state.registrations[i].id === id) return state.registrations[i];
+    return null;
+  }
+
+  function certStatusFor(qualification) {
+    if (qualification === "糖尿病療養指導士" || PREFECTURE_QUALIFICATIONS.indexOf(qualification) !== -1) {
+      return "単位証明書発行手続き中(事務局が認定組織へ単位申請を行います)";
+    }
+    if (qualification === "日本心身医学会専門医") {
+      return "受講証明書発行手続き中";
+    }
+    return null;
+  }
+
+  /* ---------------- router / role state ---------------- */
+  var role = "member";
+  var view = "notices";
+  var viewParam = null;
+
+  function go(v, param) {
+    view = v; viewParam = param || null;
+    var tabs = document.querySelectorAll("#tabs-" + role + " button");
+    tabs.forEach(function (b) { b.classList.toggle("active", b.dataset.view === v); });
+    render();
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+  }
+
+  document.getElementById("role-member").addEventListener("click", function () {
+    role = "member";
+    document.getElementById("role-member").classList.add("active");
+    document.getElementById("role-admin").classList.remove("active");
+    document.getElementById("tabs-member").style.display = "flex";
+    document.getElementById("tabs-admin").style.display = "none";
+    go("notices");
+  });
+  function switchToAdmin() {
+    role = "admin";
+    document.getElementById("role-admin").classList.add("active");
+    document.getElementById("role-member").classList.remove("active");
+    document.getElementById("tabs-admin").style.display = "flex";
+    document.getElementById("tabs-member").style.display = "none";
+    go("admin-list");
+  }
+  document.getElementById("role-admin").addEventListener("click", switchToAdmin);
+  document.querySelectorAll("nav.tabs button").forEach(function (b) {
+    b.addEventListener("click", function () { go(b.dataset.view); });
+  });
+
+  var root = document.getElementById("view-root");
+
+  function render() {
+    if (view === "notices") return renderNotices();
+    if (view === "notice-detail") return renderNoticeDetail(viewParam);
+    if (view === "payment") return renderPayment(viewParam);
+    if (view === "confirmation") return renderConfirmation(viewParam);
+    if (view === "mypage") return renderMyPage();
+    if (view === "admin-list") return renderAdminList();
+    if (view === "admin-new") return renderAdminNew();
+  }
+
+  /* ---------------- member: notice list ---------------- */
+  function renderNotices() {
+    var items = state.notices.map(function (n) {
+      var badge = n.status === "open"
+        ? '<span class="badge open">受付中</span>'
+        : '<span class="badge closed">受付終了</span>';
+      return (
+        '<div class="card notice-card" data-id="' + n.id + '">' +
+          '<div>' +
+            '<div class="meta">' + esc(n.date) + " " + esc(n.time) + " ・ 参加費 " + yen(n.fee) + '</div>' +
+            "<h3>" + esc(n.title) + "</h3>" +
+            "<p>" + esc(n.subtitle) + "</p>" +
+          "</div>" +
+          '<div style="display:flex; align-items:center; gap:14px;">' + badge + '<span class="chevron">›</span></div>' +
+        "</div>"
+      );
+    }).join("");
+
+    root.innerHTML =
+      "<h1>お知らせ一覧</h1>" +
+      '<p class="page-lead">研究会からの開催案内です。参加を希望する回を選んで、登録・お支払いに進んでください。</p>' +
+      items;
+
+    root.querySelectorAll(".notice-card").forEach(function (el) {
+      el.addEventListener("click", function () { go("notice-detail", el.dataset.id); });
+    });
+  }
+
+  /* ---------------- member: notice detail + registration form ---------------- */
+  function renderNoticeDetail(noticeId) {
+    var n = findNotice(noticeId);
+    if (!n) { go("notices"); return; }
+    var closed = n.status !== "open";
+
+    root.innerHTML =
+      '<button class="back-link" id="back-btn">‹ お知らせ一覧に戻る</button>' +
+      '<h1>' + esc(n.title) + "</h1>" +
+      '<p class="page-lead">' + esc(n.subtitle) + "</p>" +
+      '<div class="card">' +
+        '<div class="summary-row"><span class="k">開催日時</span><span class="v">' + esc(n.date) + " " + esc(n.time) + "</span></div>" +
+        '<div class="summary-row"><span class="k">支払期限</span><span class="v">' + esc(n.deadline) + "</span></div>" +
+        '<div class="summary-row"><span class="k">参加費</span><span class="v">' + yen(n.fee) + "</span></div>" +
+        '<div class="summary-row"><span class="k">支払方法</span><span class="v">piatix オンライン決済</span></div>' +
+      "</div>" +
+      '<div class="card"><p style="margin:0; color:var(--ink-soft); font-size:14px;">' + esc(n.body) + "</p></div>" +
+      (closed
+        ? '<div class="card"><p style="margin:0; color:var(--ink-faint); font-size:14px;">この回の参加登録は受付を終了しています。</p></div>'
+        : renderRegistrationForm(n));
+
+    document.getElementById("back-btn").addEventListener("click", function () { go("notices"); });
+    if (!closed) bindRegistrationForm(n);
+  }
+
+  function renderRegistrationForm(n) {
+    var options = QUALIFICATIONS.map(function (q) { return '<option value="' + esc(q) + '">' + esc(q) + "</option>"; }).join("");
+    return (
+      '<div class="card">' +
+        "<h2>参加登録</h2>" +
+        '<p class="page-lead" style="margin-bottom:18px;">氏名・所属・メールアドレスをご入力のうえ、お支払いに進んでください。</p>' +
+        '<form id="reg-form">' +
+          '<div class="field-row">' +
+            '<div class="field"><label for="f-name">氏名</label><input id="f-name" type="text" required placeholder="例)研究 花子"></div>' +
+            '<div class="field"><label for="f-org">所属</label><input id="f-org" type="text" required placeholder="例)〇〇大学病院"></div>' +
+          "</div>" +
+          '<div class="field"><label for="f-email">メールアドレス</label><input id="f-email" type="email" required placeholder="例)hanako@example.com"></div>' +
+          '<div class="field">' +
+            '<label for="f-qual">お持ちの資格(該当する場合)</label>' +
+            '<select id="f-qual">' + options + "</select>" +
+            '<div class="hint">糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)は単位証明書発行と認定組織への単位申請、日本心身医学会専門医は受講証明書発行の対象です。</div>' +
+          "</div>" +
+          '<button type="submit" class="btn btn-primary btn-block">お支払いへ進む(' + yen(n.fee) + ")</button>" +
+        "</form>" +
+      "</div>"
+    );
+  }
+
+  function bindRegistrationForm(n) {
+    var form = document.getElementById("reg-form");
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var reg = {
+        id: uid("r"),
+        noticeId: n.id,
+        name: document.getElementById("f-name").value.trim(),
+        org: document.getElementById("f-org").value.trim(),
+        email: document.getElementById("f-email").value.trim(),
+        qualification: document.getElementById("f-qual").value,
+        fee: n.fee,
+        status: "unpaid",
+        createdAt: new Date().toISOString(),
+        paidAt: null
+      };
+      state.registrations.push(reg);
+      saveState();
+      go("payment", reg.id);
+    });
+  }
+
+  /* ---------------- member: payment (piatix mock) ---------------- */
+  function renderPayment(regId) {
+    var reg = findRegistration(regId);
+    if (!reg) { go("notices"); return; }
+    var n = findNotice(reg.noticeId);
+
+    if (reg.status === "paid") { go("confirmation", reg.id); return; }
+
+    root.innerHTML =
+      '<button class="back-link" id="back-btn">‹ 登録内容を修正する</button>' +
+      "<h1>お支払い</h1>" +
+      '<p class="page-lead">piatix のオンライン決済ページ(模擬)です。カード情報を入力してお支払いを確定してください。</p>' +
+      '<div class="card">' +
+        '<div class="summary-row"><span class="k">お名前</span><span class="v">' + esc(reg.name) + "</span></div>" +
+        '<div class="summary-row"><span class="k">研修会</span><span class="v">' + esc(n ? n.title : "") + "</span></div>" +
+        '<div class="summary-row total"><span class="k">お支払い金額</span><span class="v">' + yen(reg.fee) + "</span></div>" +
+      "</div>" +
+      '<div class="piatix-panel">' +
+        '<div class="plabel">PIATIX オンライン決済(デモ)</div>' +
+        '<form id="pay-form">' +
+          '<div class="field"><label for="p-card">カード番号</label><input id="p-card" type="text" inputmode="numeric" required placeholder="4242 4242 4242 4242" maxlength="19"></div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label for="p-exp">有効期限</label><input id="p-exp" type="text" required placeholder="MM / YY" maxlength="7"></div>' +
+            '<div class="field"><label for="p-cvc">セキュリティコード</label><input id="p-cvc" type="text" inputmode="numeric" required placeholder="123" maxlength="4"></div>' +
+          "</div>" +
+          '<button type="submit" class="btn btn-primary btn-block" id="pay-btn">' + yen(reg.fee) + " を支払う</button>" +
+        "</form>" +
+      "</div>" +
+      '<p style="font-size:12px; color:var(--ink-faint);">※ デモのため実際の課金は発生しません。入力したカード情報は送信・保存されません。</p>';
+
+    document.getElementById("back-btn").addEventListener("click", function () { go("notice-detail", reg.noticeId); });
+    document.getElementById("pay-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var btn = document.getElementById("pay-btn");
+      btn.disabled = true;
+      btn.textContent = "決済処理中…";
+      setTimeout(function () {
+        reg.status = "paid";
+        reg.paidAt = new Date().toISOString();
+        reg.certStatus = certStatusFor(reg.qualification);
+        saveState();
+        go("confirmation", reg.id);
+      }, 700);
+    });
+  }
+
+  /* ---------------- member: confirmation / receipt ---------------- */
+  function renderConfirmation(regId) {
+    var reg = findRegistration(regId);
+    if (!reg) { go("notices"); return; }
+    var n = findNotice(reg.noticeId);
+
+    root.innerHTML =
+      "<h1>お申込みが完了しました</h1>" +
+      '<p class="page-lead">確認メールは送信されません(デモのため)。この画面が受付完了の証跡です。</p>' +
+      '<div class="receipt">' +
+        '<div class="stamp">受付済</div>' +
+        "<h2>" + esc(n ? n.title : "") + "</h2>" +
+        '<div class="no">受付番号 ' + esc(reg.id.toUpperCase()) + "</div>" +
+        '<div style="text-align:left; margin-top:18px;">' +
+          '<div class="summary-row"><span class="k">お名前</span><span class="v">' + esc(reg.name) + "</span></div>" +
+          '<div class="summary-row"><span class="k">所属</span><span class="v">' + esc(reg.org) + "</span></div>" +
+          '<div class="summary-row"><span class="k">開催日時</span><span class="v">' + esc(n ? n.date + " " + n.time : "") + "</span></div>" +
+          '<div class="summary-row"><span class="k">お支払い金額</span><span class="v">' + yen(reg.fee) + "</span></div>" +
+          '<div class="summary-row"><span class="k">支払方法</span><span class="v">piatix オンライン決済</span></div>' +
+          '<div class="summary-row"><span class="k">領収書</span><span class="v">発行済み</span></div>' +
+        "</div>" +
+      "</div>" +
+      (reg.certStatus
+        ? '<div class="note-box">' + esc(reg.qualification) + "の資格をお持ちとして登録されました。" + esc(reg.certStatus) + "。進捗はマイページからご確認いただけます。</div>"
+        : "") +
+      '<div style="margin-top:22px; display:flex; gap:12px; flex-wrap:wrap;">' +
+        '<button class="btn btn-primary" id="to-mypage">マイページで確認する</button>' +
+        '<button class="btn btn-ghost" id="to-notices">お知らせ一覧に戻る</button>' +
+      "</div>";
+
+    document.getElementById("to-mypage").addEventListener("click", function () { go("mypage"); });
+    document.getElementById("to-notices").addEventListener("click", function () { go("notices"); });
+  }
+
+  /* ---------------- member: my page ---------------- */
+  function renderMyPage() {
+    var mine = state.registrations.slice().reverse();
+    if (mine.length === 0) {
+      root.innerHTML = "<h1>マイページ</h1>" + '<div class="empty">まだお申込みがありません。お知らせ一覧から参加登録を行うと、ここに表示されます。</div>';
+      return;
+    }
+    var rows = mine.map(function (r) {
+      var n = findNotice(r.noticeId);
+      var badge = r.status === "paid" ? '<span class="badge paid">支払済み</span>' : '<span class="badge unpaid">未払い</span>';
+      var cert = r.certStatus ? '<div style="margin-top:6px;"><span class="badge pending">' + esc(r.certStatus) + "</span></div>" : "";
+      return (
+        '<div class="card notice-card" data-id="' + r.id + '">' +
+          "<div>" +
+            '<div class="meta">' + esc(r.id.toUpperCase()) + " ・ " + esc(n ? n.date : "") + "</div>" +
+            "<h3>" + esc(n ? n.title : "(削除された案内)") + "</h3>" +
+            "<p>" + esc(r.name) + " / " + esc(r.org) + "</p>" +
+            cert +
+          "</div>" +
+          '<div style="display:flex; align-items:center; gap:14px;">' + badge + '<span class="chevron">›</span></div>' +
+        "</div>"
+      );
+    }).join("");
+
+    root.innerHTML = "<h1>マイページ</h1>" + '<p class="page-lead">この端末で行った申込み・お支払いの履歴です。</p>' + rows;
+
+    root.querySelectorAll(".notice-card").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var r = findRegistration(el.dataset.id);
+        go(r.status === "paid" ? "confirmation" : "payment", r.id);
+      });
+    });
+  }
+
+  /* ---------------- admin: registrations list ---------------- */
+  function renderAdminList() {
+    var total = state.registrations.length;
+    var paid = state.registrations.filter(function (r) { return r.status === "paid"; }).length;
+    var unpaid = total - paid;
+    var certTargets = state.registrations.filter(function (r) { return !!r.certStatus; }).length;
+
+    var statCards =
+      '<div class="stat-grid">' +
+        '<div class="stat"><div class="num">' + total + '</div><div class="label">総申込数</div></div>' +
+        '<div class="stat"><div class="num">' + paid + '</div><div class="label">支払済み</div></div>' +
+        '<div class="stat"><div class="num">' + unpaid + '</div><div class="label">未払い</div></div>' +
+        '<div class="stat"><div class="num">' + certTargets + '</div><div class="label">単位証明書 対象者</div></div>' +
+      "</div>";
+
+    var tableRows = state.registrations.slice().reverse().map(function (r) {
+      var n = findNotice(r.noticeId);
+      var badge = r.status === "paid" ? '<span class="badge paid">支払済み</span>' : '<span class="badge unpaid">未払い</span>';
+      var certCell = r.certStatus
+        ? '<span class="badge pending">手続き中</span>'
+        : '<span style="color:var(--ink-faint);">—</span>';
+      var toggleLabel = r.status === "paid" ? "未払いに戻す" : "入金確認する";
+      return (
+        "<tr>" +
+          "<td>" + esc(r.id.toUpperCase()) + "</td>" +
+          "<td>" + esc(r.name) + "<br><span style='color:var(--ink-faint); font-size:11.5px;'>" + esc(r.org) + "</span></td>" +
+          "<td>" + esc(n ? n.title : "—") + "</td>" +
+          "<td>" + esc(r.qualification) + "</td>" +
+          "<td>" + badge + "</td>" +
+          "<td>" + certCell + "</td>" +
+          '<td><button class="row-btn" data-id="' + r.id + '">' + toggleLabel + "</button></td>" +
+        "</tr>"
+      );
+    }).join("");
+
+    root.innerHTML =
+      "<h1>参加者・入金管理</h1>" +
+      '<p class="page-lead">全お知らせの申込者と、入金・単位証明書の手続き状況を確認できます。</p>' +
+      statCards +
+      (state.registrations.length === 0
+        ? '<div class="empty">まだ申込みがありません。会員・参加者側で参加登録を行うと、ここに反映されます。</div>'
+        : '<div class="table-wrap"><table class="reg-table"><thead><tr>' +
+            "<th>受付番号</th><th>氏名 / 所属</th><th>研修会</th><th>資格</th><th>支払状況</th><th>単位証明書</th><th></th>" +
+          "</tr></thead><tbody>" + tableRows + "</tbody></table></div>");
+
+    root.querySelectorAll(".row-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var r = findRegistration(btn.dataset.id);
+        if (!r) return;
+        if (r.status === "paid") {
+          r.status = "unpaid"; r.paidAt = null; r.certStatus = null;
+        } else {
+          r.status = "paid"; r.paidAt = new Date().toISOString(); r.certStatus = certStatusFor(r.qualification);
+        }
+        saveState();
+        renderAdminList();
+      });
+    });
+  }
+
+  /* ---------------- admin: new notice ---------------- */
+  function renderAdminNew() {
+    root.innerHTML =
+      "<h1>お知らせ作成</h1>" +
+      '<p class="page-lead">新しい研修会・お知らせを作成します。作成すると会員・参加者側の一覧に表示されます。</p>' +
+      '<div class="card">' +
+        '<form id="notice-form">' +
+          '<div class="field"><label for="a-title">タイトル</label><input id="a-title" type="text" required placeholder="例)オンライン研修会 参加登録"></div>' +
+          '<div class="field"><label for="a-subtitle">副題・説明の見出し</label><input id="a-subtitle" type="text" required placeholder="例)第2回 内分泌糖尿病心理行動研究会 オンライン研修会"></div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label for="a-date">開催日</label><input id="a-date" type="date" required></div>' +
+            '<div class="field"><label for="a-time">開催時刻</label><input id="a-time" type="text" required placeholder="例)13:00〜"></div>' +
+          "</div>" +
+          '<div class="field-row">' +
+            '<div class="field"><label for="a-deadline">支払期限</label><input id="a-deadline" type="date" required></div>' +
+            '<div class="field"><label for="a-fee">参加費(円)</label><input id="a-fee" type="number" required min="0" step="100" placeholder="2000"></div>' +
+          "</div>" +
+          '<div class="field"><label for="a-body">案内本文</label><input id="a-body" type="text" required placeholder="参加者への案内文"></div>' +
+          '<button type="submit" class="btn btn-primary">お知らせを作成する</button>' +
+        "</form>" +
+      "</div>";
+
+    document.getElementById("notice-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var n = {
+        id: uid("n"),
+        title: document.getElementById("a-title").value.trim(),
+        subtitle: document.getElementById("a-subtitle").value.trim(),
+        date: document.getElementById("a-date").value,
+        time: document.getElementById("a-time").value.trim(),
+        deadline: document.getElementById("a-deadline").value,
+        fee: Number(document.getElementById("a-fee").value || 0),
+        body: document.getElementById("a-body").value.trim(),
+        status: "open"
+      };
+      state.notices.unshift(n);
+      saveState();
+      go("admin-list");
+    });
+  }
+
+  /* ---------------- init ---------------- */
+  if (window.location.hash === "#admin") {
+    switchToAdmin();
+  } else {
+    go("notices");
+  }
+})();
+</script>
+</body>
+</html>
