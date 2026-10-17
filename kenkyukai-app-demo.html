@@ -207,56 +207,62 @@
 
 <footer class="site">第1回糖尿病心理行動研究会 お知らせ・お支払いアプリ — 企画デモ</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   "use strict";
 
-  var STORE_KEY = "kenkyukai_app_demo_v1";
+  /* ---------------- Supabase ---------------- */
+  var SUPABASE_URL = "https://zoilxrvhxawvhmcemmtr.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_6jxL8odRgE4GxPa0EwsqWQ_qhkyPBhB";
+  var db = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  // この端末で申し込んだ受付番号(UUID)だけをブラウザに覚えておく。申込みの中身はサーバーにある
+  var MY_REGS_KEY = "kenkyukai_my_regs_v1";
 
   var PREFECTURES = ["岡山県", "大阪府", "京都府", "北九州", "兵庫県", "神奈川県", "東京都"];
   var PREFECTURE_QUALIFICATIONS = PREFECTURES.map(function (p) { return p + "糖尿病療養指導士"; });
   var QUALIFICATIONS = ["なし", "糖尿病療養指導士"].concat(PREFECTURE_QUALIFICATIONS).concat(["日本心身医学会専門医"]);
 
-  function defaultState() {
-    return {
-      notices: [
-        {
-          id: "n1",
-          title: "オンライン研修会 参加登録",
-          subtitle: "第1回糖尿病心理行動研究会 オンライン研修会",
-          date: "2027-03-14",
-          time: "13:00〜",
-          deadline: "2027-02-26",
-          fee: 2000,
-          body: "第1回糖尿病心理行動研究会が開催するオンライン研修会のご案内です。参加費のお支払いは piatix によるオンライン決済でその場に完了します。糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)については、受講後に事務局が単位証明書を発行し、各認定組織へ単位として認められるよう申請まで行います。日本心身医学会専門医については受講証明書を発行します。",
-          status: "open"
-        }
-      ],
-      registrations: []
-    };
+  var state = { notices: [], registrations: [] };
+
+  function getMyIds() {
+    try { return JSON.parse(localStorage.getItem(MY_REGS_KEY) || "[]"); } catch (e) { return []; }
+  }
+  function addMyId(id) {
+    var ids = getMyIds();
+    if (ids.indexOf(id) === -1) ids.push(id);
+    try { localStorage.setItem(MY_REGS_KEY, JSON.stringify(ids)); } catch (e) {}
   }
 
-  function loadState() {
-    try {
-      var raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return defaultState();
-      var parsed = JSON.parse(raw);
-      if (!parsed || !parsed.notices || !parsed.registrations) return defaultState();
-      return parsed;
-    } catch (e) {
-      return defaultState();
-    }
+  function mapNotice(r) {
+    return { id: r.id, title: r.title, subtitle: r.subtitle, date: r.event_date, time: r.event_time,
+             deadline: r.deadline, fee: r.fee, body: r.body, status: r.status };
+  }
+  function mapReg(r) {
+    return { id: r.id, noticeId: r.notice_id, name: r.name, org: r.org, email: r.email,
+             qualification: r.qualification, fee: r.fee, status: r.status, certStatus: r.cert_status,
+             createdAt: r.created_at, paidAt: r.paid_at };
   }
 
-  var state = loadState();
-
-  function saveState() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  async function loadNotices() {
+    var res = await db.from("kenkyukai_notices").select("*").order("created_at", { ascending: false });
+    if (res.error) throw res.error;
+    state.notices = res.data.map(mapNotice);
+    return state.notices;
+  }
+  async function fetchRegs(ids) {
+    if (!ids.length) return [];
+    var res = await db.rpc("kenkyukai_get_registrations", { p_ids: ids });
+    if (res.error) throw res.error;
+    return res.data.map(mapReg);
+  }
+  async function fetchReg(id) {
+    var list = await fetchRegs([id]);
+    return list[0] || null;
   }
 
-  function uid(prefix) {
-    return prefix + "-" + Math.random().toString(36).slice(2, 8);
-  }
+  function uid8(id) { return String(id).slice(0, 8).toUpperCase(); }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -268,10 +274,6 @@
 
   function findNotice(id) {
     for (var i = 0; i < state.notices.length; i++) if (state.notices[i].id === id) return state.notices[i];
-    return null;
-  }
-  function findRegistration(id) {
-    for (var i = 0; i < state.registrations.length; i++) if (state.registrations[i].id === id) return state.registrations[i];
     return null;
   }
 
@@ -289,6 +291,7 @@
   var role = "member";
   var view = "notices";
   var viewParam = null;
+  var renderToken = 0;
 
   function go(v, param) {
     view = v; viewParam = param || null;
@@ -321,24 +324,35 @@
 
   var root = document.getElementById("view-root");
 
-  function render() {
-    if (view === "notices") return renderNotices();
-    if (view === "notice-detail") return renderNoticeDetail(viewParam);
-    if (view === "payment") return renderPayment(viewParam);
-    if (view === "confirmation") return renderConfirmation(viewParam);
-    if (view === "mypage") return renderMyPage();
-    if (view === "admin-list") return renderAdminList();
-    if (view === "admin-new") return renderAdminNew();
+  async function render() {
+    var t = ++renderToken;
+    root.innerHTML = '<div class="empty">読み込み中…</div>';
+    try {
+      if (!db) throw new Error("Supabase を読み込めませんでした。ネットワークを確認してください。");
+      if (view === "notices") return await renderNotices(t);
+      if (view === "notice-detail") return await renderNoticeDetail(t, viewParam);
+      if (view === "payment") return await renderPayment(t, viewParam);
+      if (view === "confirmation") return await renderConfirmation(t, viewParam);
+      if (view === "mypage") return await renderMyPage(t);
+      if (view === "admin-list") return await renderAdminList(t);
+      if (view === "admin-new") return await renderAdminNew(t);
+    } catch (e) {
+      if (t !== renderToken) return;
+      root.innerHTML = '<div class="card"><p style="margin:0; color:var(--ink-soft); font-size:14px;">読み込みに失敗しました: ' +
+        esc(e && e.message ? e.message : e) + "</p></div>";
+    }
   }
 
   /* ---------------- member: notice list ---------------- */
-  function renderNotices() {
+  async function renderNotices(t) {
+    await loadNotices();
+    if (t !== renderToken) return;
     var items = state.notices.map(function (n) {
       var badge = n.status === "open"
         ? '<span class="badge open">受付中</span>'
         : '<span class="badge closed">受付終了</span>';
       return (
-        '<div class="card notice-card" data-id="' + n.id + '">' +
+        '<div class="card notice-card" data-id="' + esc(n.id) + '">' +
           '<div>' +
             '<div class="meta">' + esc(n.date) + " " + esc(n.time) + " ・ 参加費 " + yen(n.fee) + '</div>' +
             "<h3>" + esc(n.title) + "</h3>" +
@@ -352,7 +366,7 @@
     root.innerHTML =
       "<h1>お知らせ一覧</h1>" +
       '<p class="page-lead">研究会からの開催案内です。参加を希望する回を選んで、登録・お支払いに進んでください。</p>' +
-      items;
+      (items || '<div class="empty">現在、公開中のお知らせはありません。</div>');
 
     root.querySelectorAll(".notice-card").forEach(function (el) {
       el.addEventListener("click", function () { go("notice-detail", el.dataset.id); });
@@ -360,7 +374,9 @@
   }
 
   /* ---------------- member: notice detail + registration form ---------------- */
-  function renderNoticeDetail(noticeId) {
+  async function renderNoticeDetail(t, noticeId) {
+    if (!findNotice(noticeId)) await loadNotices();
+    if (t !== renderToken) return;
     var n = findNotice(noticeId);
     if (!n) { go("notices"); return; }
     var closed = n.status !== "open";
@@ -392,10 +408,10 @@
         '<p class="page-lead" style="margin-bottom:18px;">氏名・所属・メールアドレスをご入力のうえ、お支払いに進んでください。</p>' +
         '<form id="reg-form">' +
           '<div class="field-row">' +
-            '<div class="field"><label for="f-name">氏名</label><input id="f-name" type="text" required placeholder="例)研究 花子"></div>' +
-            '<div class="field"><label for="f-org">所属</label><input id="f-org" type="text" required placeholder="例)〇〇大学病院"></div>' +
+            '<div class="field"><label for="f-name">氏名</label><input id="f-name" type="text" required maxlength="50" placeholder="例)研究 花子"></div>' +
+            '<div class="field"><label for="f-org">所属</label><input id="f-org" type="text" required maxlength="100" placeholder="例)〇〇大学病院"></div>' +
           "</div>" +
-          '<div class="field"><label for="f-email">メールアドレス</label><input id="f-email" type="email" required placeholder="例)hanako@example.com"></div>' +
+          '<div class="field"><label for="f-email">メールアドレス</label><input id="f-email" type="email" required maxlength="200" placeholder="例)hanako@example.com"></div>' +
           '<div class="field">' +
             '<label for="f-qual">お持ちの資格(該当する場合)</label>' +
             '<select id="f-qual">' + options + "</select>" +
@@ -409,29 +425,32 @@
 
   function bindRegistrationForm(n) {
     var form = document.getElementById("reg-form");
-    form.addEventListener("submit", function (e) {
+    form.addEventListener("submit", async function (e) {
       e.preventDefault();
-      var reg = {
-        id: uid("r"),
-        noticeId: n.id,
-        name: document.getElementById("f-name").value.trim(),
-        org: document.getElementById("f-org").value.trim(),
-        email: document.getElementById("f-email").value.trim(),
-        qualification: document.getElementById("f-qual").value,
-        fee: n.fee,
-        status: "unpaid",
-        createdAt: new Date().toISOString(),
-        paidAt: null
-      };
-      state.registrations.push(reg);
-      saveState();
-      go("payment", reg.id);
+      var btn = form.querySelector("button[type=submit]");
+      btn.disabled = true;
+      var res = await db.rpc("kenkyukai_register", {
+        p_notice_id: n.id,
+        p_name: document.getElementById("f-name").value,
+        p_org: document.getElementById("f-org").value,
+        p_email: document.getElementById("f-email").value,
+        p_qualification: document.getElementById("f-qual").value
+      });
+      if (res.error) {
+        alert("登録に失敗しました: " + res.error.message);
+        btn.disabled = false;
+        return;
+      }
+      addMyId(res.data.id);
+      go("payment", res.data.id);
     });
   }
 
   /* ---------------- member: payment (piatix mock) ---------------- */
-  function renderPayment(regId) {
-    var reg = findRegistration(regId);
+  async function renderPayment(t, regId) {
+    var reg = await fetchReg(regId);
+    if (!findNotice(reg ? reg.noticeId : null)) await loadNotices();
+    if (t !== renderToken) return;
     if (!reg) { go("notices"); return; }
     var n = findNotice(reg.noticeId);
 
@@ -460,24 +479,27 @@
       '<p style="font-size:12px; color:var(--ink-faint);">※ デモのため実際の課金は発生しません。入力したカード情報は送信・保存されません。</p>';
 
     document.getElementById("back-btn").addEventListener("click", function () { go("notice-detail", reg.noticeId); });
-    document.getElementById("pay-form").addEventListener("submit", function (e) {
+    document.getElementById("pay-form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var btn = document.getElementById("pay-btn");
       btn.disabled = true;
       btn.textContent = "決済処理中…";
-      setTimeout(function () {
-        reg.status = "paid";
-        reg.paidAt = new Date().toISOString();
-        reg.certStatus = certStatusFor(reg.qualification);
-        saveState();
-        go("confirmation", reg.id);
-      }, 700);
+      var res = await db.rpc("kenkyukai_mock_pay", { p_id: reg.id });
+      if (res.error) {
+        alert("お支払いの処理に失敗しました: " + res.error.message);
+        btn.disabled = false;
+        btn.textContent = yen(reg.fee) + " を支払う";
+        return;
+      }
+      go("confirmation", reg.id);
     });
   }
 
   /* ---------------- member: confirmation / receipt ---------------- */
-  function renderConfirmation(regId) {
-    var reg = findRegistration(regId);
+  async function renderConfirmation(t, regId) {
+    var reg = await fetchReg(regId);
+    if (reg && !findNotice(reg.noticeId)) await loadNotices();
+    if (t !== renderToken) return;
     if (!reg) { go("notices"); return; }
     var n = findNotice(reg.noticeId);
 
@@ -487,7 +509,7 @@
       '<div class="receipt">' +
         '<div class="stamp">受付済</div>' +
         "<h2>" + esc(n ? n.title : "") + "</h2>" +
-        '<div class="no">受付番号 ' + esc(reg.id.toUpperCase()) + "</div>" +
+        '<div class="no">受付番号 ' + esc(uid8(reg.id)) + "</div>" +
         '<div style="text-align:left; margin-top:18px;">' +
           '<div class="summary-row"><span class="k">お名前</span><span class="v">' + esc(reg.name) + "</span></div>" +
           '<div class="summary-row"><span class="k">所属</span><span class="v">' + esc(reg.org) + "</span></div>" +
@@ -510,20 +532,24 @@
   }
 
   /* ---------------- member: my page ---------------- */
-  function renderMyPage() {
-    var mine = state.registrations.slice().reverse();
+  async function renderMyPage(t) {
+    var results = await Promise.all([fetchRegs(getMyIds()), loadNotices()]);
+    if (t !== renderToken) return;
+    var mine = results[0].sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : -1; });
     if (mine.length === 0) {
       root.innerHTML = "<h1>マイページ</h1>" + '<div class="empty">まだお申込みがありません。お知らせ一覧から参加登録を行うと、ここに表示されます。</div>';
       return;
     }
+    var byId = {};
+    mine.forEach(function (r) { byId[r.id] = r; });
     var rows = mine.map(function (r) {
       var n = findNotice(r.noticeId);
       var badge = r.status === "paid" ? '<span class="badge paid">支払済み</span>' : '<span class="badge unpaid">未払い</span>';
       var cert = r.certStatus ? '<div style="margin-top:6px;"><span class="badge pending">' + esc(r.certStatus) + "</span></div>" : "";
       return (
-        '<div class="card notice-card" data-id="' + r.id + '">' +
+        '<div class="card notice-card" data-id="' + esc(r.id) + '">' +
           "<div>" +
-            '<div class="meta">' + esc(r.id.toUpperCase()) + " ・ " + esc(n ? n.date : "") + "</div>" +
+            '<div class="meta">' + esc(uid8(r.id)) + " ・ " + esc(n ? n.date : "") + "</div>" +
             "<h3>" + esc(n ? n.title : "(削除された案内)") + "</h3>" +
             "<p>" + esc(r.name) + " / " + esc(r.org) + "</p>" +
             cert +
@@ -537,14 +563,70 @@
 
     root.querySelectorAll(".notice-card").forEach(function (el) {
       el.addEventListener("click", function () {
-        var r = findRegistration(el.dataset.id);
+        var r = byId[el.dataset.id];
         go(r.status === "paid" ? "confirmation" : "payment", r.id);
       });
     });
   }
 
+  /* ---------------- admin: login gate ---------------- */
+  // 管理者としてログインしている場合だけ true を返す。そうでなければログイン画面などを表示して false
+  async function adminGate(t) {
+    var s = await db.auth.getSession();
+    if (t !== renderToken) return false;
+    if (!s.data.session) { renderAdminLogin(); return false; }
+    var r = await db.rpc("kenkyukai_is_admin");
+    if (t !== renderToken) return false;
+    if (r.error) throw r.error;
+    if (!r.data) { renderNotAdmin(s.data.session.user.email); return false; }
+    return true;
+  }
+
+  function renderAdminLogin() {
+    root.innerHTML =
+      "<h1>管理者ログイン</h1>" +
+      '<p class="page-lead">参加者・入金管理とお知らせ作成は、事務局の管理者のみ利用できます。</p>' +
+      '<div class="card">' +
+        '<form id="admin-login-form">' +
+          '<div class="field"><label for="l-email">メールアドレス</label><input id="l-email" type="email" required autocomplete="username"></div>' +
+          '<div class="field"><label for="l-pass">パスワード</label><input id="l-pass" type="password" required autocomplete="current-password"></div>' +
+          '<button type="submit" class="btn btn-primary">ログイン</button>' +
+        "</form>" +
+      "</div>";
+    document.getElementById("admin-login-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var res = await db.auth.signInWithPassword({
+        email: document.getElementById("l-email").value.trim(),
+        password: document.getElementById("l-pass").value
+      });
+      if (res.error) { alert("ログインできませんでした: " + res.error.message); return; }
+      render();
+    });
+  }
+
+  function renderNotAdmin(email) {
+    root.innerHTML =
+      "<h1>管理権限がありません</h1>" +
+      '<div class="card"><p style="margin:0 0 14px; color:var(--ink-soft); font-size:14px;">' + esc(email) +
+      " には管理権限がありません。管理者のアカウントでログインし直してください。</p>" +
+      '<button class="btn btn-ghost" id="admin-logout">ログアウト</button></div>';
+    document.getElementById("admin-logout").addEventListener("click", async function () {
+      await db.auth.signOut();
+      render();
+    });
+  }
+
   /* ---------------- admin: registrations list ---------------- */
-  function renderAdminList() {
+  async function renderAdminList(t) {
+    if (!(await adminGate(t))) return;
+    var results = await Promise.all([
+      db.from("kenkyukai_registrations").select("*").order("created_at", { ascending: false }),
+      loadNotices()
+    ]);
+    if (t !== renderToken) return;
+    if (results[0].error) throw results[0].error;
+    state.registrations = results[0].data.map(mapReg);
+
     var total = state.registrations.length;
     var paid = state.registrations.filter(function (r) { return r.status === "paid"; }).length;
     var unpaid = total - paid;
@@ -558,7 +640,7 @@
         '<div class="stat"><div class="num">' + certTargets + '</div><div class="label">単位証明書 対象者</div></div>' +
       "</div>";
 
-    var tableRows = state.registrations.slice().reverse().map(function (r) {
+    var tableRows = state.registrations.map(function (r) {
       var n = findNotice(r.noticeId);
       var badge = r.status === "paid" ? '<span class="badge paid">支払済み</span>' : '<span class="badge unpaid">未払い</span>';
       var certCell = r.certStatus
@@ -567,13 +649,13 @@
       var toggleLabel = r.status === "paid" ? "未払いに戻す" : "入金確認する";
       return (
         "<tr>" +
-          "<td>" + esc(r.id.toUpperCase()) + "</td>" +
-          "<td>" + esc(r.name) + "<br><span style='color:var(--ink-faint); font-size:11.5px;'>" + esc(r.org) + "</span></td>" +
+          "<td>" + esc(uid8(r.id)) + "</td>" +
+          "<td>" + esc(r.name) + "<br><span style='color:var(--ink-faint); font-size:11.5px;'>" + esc(r.org) + " / " + esc(r.email) + "</span></td>" +
           "<td>" + esc(n ? n.title : "—") + "</td>" +
           "<td>" + esc(r.qualification) + "</td>" +
           "<td>" + badge + "</td>" +
           "<td>" + certCell + "</td>" +
-          '<td><button class="row-btn" data-id="' + r.id + '">' + toggleLabel + "</button></td>" +
+          '<td><button class="row-btn" data-id="' + esc(r.id) + '">' + toggleLabel + "</button></td>" +
         "</tr>"
       );
     }).join("");
@@ -585,61 +667,67 @@
       (state.registrations.length === 0
         ? '<div class="empty">まだ申込みがありません。会員・参加者側で参加登録を行うと、ここに反映されます。</div>'
         : '<div class="table-wrap"><table class="reg-table"><thead><tr>' +
-            "<th>受付番号</th><th>氏名 / 所属</th><th>研修会</th><th>資格</th><th>支払状況</th><th>単位証明書</th><th></th>" +
-          "</tr></thead><tbody>" + tableRows + "</tbody></table></div>");
+            "<th>受付番号</th><th>氏名 / 所属 / メール</th><th>研修会</th><th>資格</th><th>支払状況</th><th>単位証明書</th><th></th>" +
+          "</tr></thead><tbody>" + tableRows + "</tbody></table></div>") +
+      '<div style="margin-top:22px;"><button class="btn btn-ghost" id="admin-logout">ログアウト</button></div>';
+
+    document.getElementById("admin-logout").addEventListener("click", async function () {
+      await db.auth.signOut();
+      render();
+    });
 
     root.querySelectorAll(".row-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var r = findRegistration(btn.dataset.id);
+      btn.addEventListener("click", async function () {
+        var r = state.registrations.filter(function (x) { return x.id === btn.dataset.id; })[0];
         if (!r) return;
-        if (r.status === "paid") {
-          r.status = "unpaid"; r.paidAt = null; r.certStatus = null;
-        } else {
-          r.status = "paid"; r.paidAt = new Date().toISOString(); r.certStatus = certStatusFor(r.qualification);
-        }
-        saveState();
-        renderAdminList();
+        var patch = r.status === "paid"
+          ? { status: "unpaid", paid_at: null, cert_status: null }
+          : { status: "paid", paid_at: new Date().toISOString(), cert_status: certStatusFor(r.qualification) };
+        btn.disabled = true;
+        var res = await db.from("kenkyukai_registrations").update(patch).eq("id", r.id);
+        if (res.error) { alert("更新に失敗しました: " + res.error.message); btn.disabled = false; return; }
+        render();
       });
     });
   }
 
   /* ---------------- admin: new notice ---------------- */
-  function renderAdminNew() {
+  async function renderAdminNew(t) {
+    if (!(await adminGate(t))) return;
     root.innerHTML =
       "<h1>お知らせ作成</h1>" +
       '<p class="page-lead">新しい研修会・お知らせを作成します。作成すると会員・参加者側の一覧に表示されます。</p>' +
       '<div class="card">' +
         '<form id="notice-form">' +
-          '<div class="field"><label for="a-title">タイトル</label><input id="a-title" type="text" required placeholder="例)オンライン研修会 参加登録"></div>' +
-          '<div class="field"><label for="a-subtitle">副題・説明の見出し</label><input id="a-subtitle" type="text" required placeholder="例)第1回糖尿病心理行動研究会 オンライン研修会(第2回)"></div>' +
+          '<div class="field"><label for="a-title">タイトル</label><input id="a-title" type="text" required maxlength="100" placeholder="例)オンライン研修会 参加登録"></div>' +
+          '<div class="field"><label for="a-subtitle">副題・説明の見出し</label><input id="a-subtitle" type="text" required maxlength="200" placeholder="例)第1回糖尿病心理行動研究会 オンライン研修会(第2回)"></div>' +
           '<div class="field-row">' +
             '<div class="field"><label for="a-date">開催日</label><input id="a-date" type="date" required></div>' +
-            '<div class="field"><label for="a-time">開催時刻</label><input id="a-time" type="text" required placeholder="例)13:00〜"></div>' +
+            '<div class="field"><label for="a-time">開催時刻</label><input id="a-time" type="text" required maxlength="30" placeholder="例)13:00〜"></div>' +
           "</div>" +
           '<div class="field-row">' +
             '<div class="field"><label for="a-deadline">支払期限</label><input id="a-deadline" type="date" required></div>' +
             '<div class="field"><label for="a-fee">参加費(円)</label><input id="a-fee" type="number" required min="0" step="100" placeholder="2000"></div>' +
           "</div>" +
-          '<div class="field"><label for="a-body">案内本文</label><input id="a-body" type="text" required placeholder="参加者への案内文"></div>' +
+          '<div class="field"><label for="a-body">案内本文</label><input id="a-body" type="text" required maxlength="3000" placeholder="参加者への案内文"></div>' +
           '<button type="submit" class="btn btn-primary">お知らせを作成する</button>' +
         "</form>" +
       "</div>";
 
-    document.getElementById("notice-form").addEventListener("submit", function (e) {
+    document.getElementById("notice-form").addEventListener("submit", async function (e) {
       e.preventDefault();
-      var n = {
-        id: uid("n"),
+      var btn = e.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      var res = await db.from("kenkyukai_notices").insert({
         title: document.getElementById("a-title").value.trim(),
         subtitle: document.getElementById("a-subtitle").value.trim(),
-        date: document.getElementById("a-date").value,
-        time: document.getElementById("a-time").value.trim(),
+        event_date: document.getElementById("a-date").value,
+        event_time: document.getElementById("a-time").value.trim(),
         deadline: document.getElementById("a-deadline").value,
         fee: Number(document.getElementById("a-fee").value || 0),
-        body: document.getElementById("a-body").value.trim(),
-        status: "open"
-      };
-      state.notices.unshift(n);
-      saveState();
+        body: document.getElementById("a-body").value.trim()
+      });
+      if (res.error) { alert("作成に失敗しました: " + res.error.message); btn.disabled = false; return; }
       go("admin-list");
     });
   }
