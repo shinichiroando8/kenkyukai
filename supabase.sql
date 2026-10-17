@@ -135,3 +135,27 @@ values (
   '2027-03-14', '13:00〜', '2027-02-26', 2000,
   '第1回糖尿病心理行動研究会が開催するオンライン研修会のご案内です。参加費のお支払いは piatix によるオンライン決済でその場に完了します。糖尿病療養指導士・都道府県糖尿病療養指導士(岡山県・大阪府・京都府・北九州・兵庫県・神奈川県・東京都)については、受講後に事務局が単位証明書を発行し、各認定組織へ単位として認められるよう申請まで行います。日本心身医学会専門医については受講証明書を発行します。'
 );
+
+-- 研究会アプリの管理操作に2段階認証(TOTP)を必須にする
+-- 管理者の判定(kenkyukai_is_admin)に「2段階認証を済ませたログイン(aal2)であること」を加える。
+-- 申込者一覧の閲覧・入金確認・お知らせ作成など、管理者用のポリシーはすべてこの関数を使っているため、
+-- パスワードだけのログインでは何もできなくなる。
+
+-- 管理者として登録されているか(2段階認証の状態は問わない)。
+-- 画面側で「権限なし」と「2段階認証の登録・入力が必要」を見分けるために使う
+create function public.kenkyukai_is_admin_user()
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.kenkyukai_admins where user_id = auth.uid());
+$$;
+
+create or replace function public.kenkyukai_is_admin()
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.kenkyukai_admins where user_id = auth.uid())
+     and coalesce(auth.jwt() ->> 'aal', '') = 'aal2';
+$$;
